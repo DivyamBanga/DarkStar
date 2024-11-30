@@ -2,7 +2,7 @@
 
 /**
  * Multiplayer Game Client-Side Script
- * Handles rendering, player input, and communication with the server.
+ * Handles rendering, player input via keyboard, and communication with the server.
  */
 
 const socket = io();
@@ -22,37 +22,30 @@ let players = {};
 // Resource map
 let resourceMap = [];
 
-// Track cursor position and button states
-let cursor = { x: canvas.width / 2, y: canvas.height / 2 };
-let isAccelerating = false;
-let isBraking = false;
+// Player movement keys (Arrow keys and WASD)
+const keys = {
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+    w: false,
+    a: false,
+    s: false,
+    d: false
+};
 
-// Handle mouse movement
-canvas.addEventListener('mousemove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    cursor.x = e.clientX - rect.left;
-    cursor.y = e.clientY - rect.top;
-});
-
-// Handle mouse button presses
-canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0) { // Left button
-        isAccelerating = true;
-    } else if (e.button === 2) { // Right button
-        isBraking = true;
+// Handle keydown and keyup
+window.addEventListener('keydown', (e) => {
+    if (e.key in keys) {
+        keys[e.key] = true;
     }
 });
 
-canvas.addEventListener('mouseup', (e) => {
-    if (e.button === 0) { // Left button
-        isAccelerating = false;
-    } else if (e.button === 2) { // Right button
-        isBraking = false;
+window.addEventListener('keyup', (e) => {
+    if (e.key in keys) {
+        keys[e.key] = false;
     }
 });
-
-// Prevent context menu on right-click
-canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // Receive resource map from server
 socket.on('resourceMap', (serverResourceMap) => {
@@ -78,38 +71,38 @@ function handleResources() {
         const gridY = Math.floor(player.y / GRID_SIZE);
         if (resourceMap[gridX] && resourceMap[gridX][gridY]) {
             const material = resourceMap[gridX][gridY];
-            if (material === 'resource') {
+            if (material === 'dirt') {
                 socket.emit('collectResource', { x: player.x, y: player.y });
-            } else if (material === 'lava') {
-                // Health reduction is handled server-side
             }
+            // Removed handling for 'lava' as it's no longer present
         }
     }
 }
 
-// Update movement data
+// Update movement data based on keyboard input
 function updateMovement() {
     const player = players[socket.id];
     if (player) {
-        const dx = cursor.x - player.x;
-        const dy = cursor.y - player.y;
-        const distance = Math.hypot(dx, dy);
-        const direction = distance > 0 ? { x: dx / distance, y: dy / distance } : { x: 0, y: 0 };
-        
-        // Set base speed
-        let speed = 2;
-        
-        if (isAccelerating) {
-            speed += 3; // Accelerate
+        let dx = 0;
+        let dy = 0;
+        const speed = 5; // Base movement speed
+
+        // Arrow keys and WASD
+        if (keys.ArrowUp || keys.w) dy -= speed;
+        if (keys.ArrowDown || keys.s) dy += speed;
+        if (keys.ArrowLeft || keys.a) dx -= speed;
+        if (keys.ArrowRight || keys.d) dx += speed;
+
+        // Normalize diagonal movement
+        if (dx !== 0 && dy !== 0) {
+            dx *= Math.SQRT1_2;
+            dy *= Math.SQRT1_2;
         }
-        if (isBraking) {
-            speed = Math.max(speed - 3, 1); // Brake
-        }
-        
+
         // Update player position
-        player.x += direction.x * speed;
-        player.y += direction.y * speed;
-        
+        player.x += dx;
+        player.y += dy;
+
         // Emit updated position to server
         socket.emit('move', { x: player.x, y: player.y });
     }
@@ -123,11 +116,8 @@ function gameLoop() {
     for (let x = 0; x < resourceMap.length; x++) {
         for (let y = 0; y < resourceMap[x].length; y++) {
             const material = resourceMap[x][y];
-            if (material === 'resource') {
-                ctx.fillStyle = 'green';
-                ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-            } else if (material === 'lava') {
-                ctx.fillStyle = 'red';
+            if (material === 'dirt') {
+                ctx.fillStyle = 'brown'; // Representing dirt
                 ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
             }
         }

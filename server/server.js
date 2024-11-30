@@ -20,8 +20,8 @@ app.use(express.static('public'));
 // Define materials
 const MATERIALS = {
     EMPTY: 'empty',
-    RESOURCE: 'resource',
-    LAVA: 'lava'
+    DIRT: 'dirt' // Changed from 'resource' to 'dirt'
+    // Removed other materials like 'resource' and 'lava'
 };
 
 // Initialize resource map (simple grid)
@@ -30,18 +30,11 @@ const MAP_WIDTH = 800;
 const MAP_HEIGHT = 600;
 let resourceMap = [];
 
-// Initialize the resource map with random materials
+// Initialize the resource map with dirt only
 for (let x = 0; x < MAP_WIDTH / GRID_SIZE; x++) {
     resourceMap[x] = [];
     for (let y = 0; y < MAP_HEIGHT / GRID_SIZE; y++) {
-        const rand = Math.random();
-        if (rand < 0.7) {
-            resourceMap[x][y] = MATERIALS.EMPTY;
-        } else if (rand < 0.9) {
-            resourceMap[x][y] = MATERIALS.RESOURCE;
-        } else {
-            resourceMap[x][y] = MATERIALS.LAVA;
-        }
+        resourceMap[x][y] = MATERIALS.DIRT;
     }
 }
 
@@ -121,22 +114,14 @@ io.on('connection', (socket) => {
         const gridY = Math.floor(position.y / GRID_SIZE);
         if (resourceMap[gridX] && resourceMap[gridX][gridY]) {
             const material = resourceMap[gridX][gridY];
-            if (material === MATERIALS.RESOURCE) {
+            if (material === MATERIALS.DIRT) {
                 players[socket.id].size += 1;
                 players[socket.id].armor += 1;
                 resourceMap[gridX][gridY] = MATERIALS.EMPTY;
                 io.emit('updatePlayers', players);
                 io.emit('resourceMap', resourceMap);
-            } else if (material === MATERIALS.LAVA) {
-                players[socket.id].health -= 10;
-                if (players[socket.id].health <= 0) {
-                    delete players[socket.id];
-                    io.emit('updatePlayers', players);
-                    io.to(socket.id).emit('eliminated');
-                } else {
-                    io.emit('updatePlayers', players);
-                }
             }
+            // Removed handling for 'lava' as it's no longer present
         }
     });
 
