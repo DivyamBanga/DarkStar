@@ -38,6 +38,10 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('chatMessage', ({ name, message }) => {
+        io.emit('chatMessage', { name, message }); // Broadcast chat message to all players
+    });
+
     socket.on('disconnect', () => {
         console.log(`Player disconnected: ${socket.id}`);
         delete players[socket.id];

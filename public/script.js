@@ -3,6 +3,10 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const menu = document.getElementById('menu');
 const playButton = document.getElementById('playButton');
+const chatBox = document.getElementById('chatBox');
+const chatLog = document.getElementById('chatLog');
+const chatInput = document.getElementById('chatInput');
+let chatVisible = false;
 let playerName = '';
 
 // Resize canvas
@@ -30,8 +34,36 @@ playButton.addEventListener('click', () => {
 });
 
 // Handle keydown and keyup
-window.addEventListener('keydown', (e) => { keys[e.key] = true; });
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        chatVisible = !chatVisible;
+        chatBox.style.display = chatVisible ? 'flex' : 'none';
+        if (chatVisible) chatInput.focus();
+    } else {
+        keys[e.key] = true;
+    }
+});
+
 window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+// Send message on Enter
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && chatInput.value.trim()) {
+        const message = chatInput.value.trim();
+        socket.emit('chatMessage', { name: playerName, message });
+        chatInput.value = ''; // Clear input field
+    }
+});
+
+// Receive messages and update chat log
+socket.on('chatMessage', ({ name, message }) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const chatEntry = document.createElement('div');
+    chatEntry.textContent = `[${timestamp}] ${name}: ${message}`;
+    chatLog.appendChild(chatEntry);
+    chatLog.scrollTop = chatLog.scrollHeight; // Auto-scroll to bottom
+});
 
 // Update players from server
 socket.on('updatePlayers', (serverPlayers) => {
