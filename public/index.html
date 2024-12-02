@@ -7,7 +7,12 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <div id="menu">
+        <h1>Multiplayer Game</h1>
+        <input type="text" id="playerName" placeholder="Enter your name">
+        <button id="playButton">Play</button>
+    </div>
+    <canvas id="gameCanvas" style="display: none;"></canvas>
     <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
