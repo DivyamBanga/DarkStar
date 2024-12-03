@@ -9,6 +9,10 @@ const chatInput = document.getElementById('chatInput');
 let chatVisible = false;
 let playerName = '';
 
+// Map dimensions
+const mapWidth = 3000;
+const mapHeight = 3000;
+
 // Resize canvas
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -74,26 +78,46 @@ socket.on('updatePlayers', (serverPlayers) => {
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const player = players[socket.id];
+    if (!player) {
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
+    // Center view on the player
+    const offsetX = canvas.width / 2 - player.x;
+    const offsetY = canvas.height / 2 - player.y;
+
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+
+    // Draw map boundary
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, mapWidth, mapHeight);
+
     // Draw players
     for (const id in players) {
-        const player = players[id];
-        ctx.fillStyle = player.color;
-        ctx.fillRect(player.x, player.y, 20, 20);
+        const p = players[id];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
         // Draw player name
         ctx.fillStyle = 'white';
         ctx.font = '12px Arial';
-        ctx.fillText(player.name, player.x, player.y - 5);
+        ctx.fillText(p.name, p.x - 10, p.y - 15);
     }
 
-    // Send movement data with screen boundaries
-    const player = players[socket.id];
-    if (player) {
-        if (keys.ArrowUp && player.y > 0) socket.emit('move', { dx: 0, dy: -5 });
-        if (keys.ArrowDown && player.y < canvas.height - 20) socket.emit('move', { dx: 0, dy: 5 });
-        if (keys.ArrowLeft && player.x > 0) socket.emit('move', { dx: -5, dy: 0 });
-        if (keys.ArrowRight && player.x < canvas.width - 20) socket.emit('move', { dx: 5, dy: 0 });
-    }
+    ctx.restore();
+
+    // Send movement data with map boundaries
+    if (keys.ArrowUp && player.y > 10) socket.emit('move', { dx: 0, dy: -5 });
+    if (keys.ArrowDown && player.y < mapHeight - 10) socket.emit('move', { dx: 0, dy: 5 });
+    if (keys.ArrowLeft && player.x > 10) socket.emit('move', { dx: -5, dy: 0 });
+    if (keys.ArrowRight && player.x < mapWidth - 10) socket.emit('move', { dx: 5, dy: 0 });
 
     requestAnimationFrame(gameLoop);
 }
