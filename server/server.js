@@ -29,8 +29,6 @@ setInterval(() => {
 }, 1000);
 
 io.on('connection', (socket) => {
-    console.log(`Player connected: ${socket.id}`);
-
     socket.on('newPlayer', (name) => {
         players[socket.id] = { x: Math.random() * 1000, y: Math.random() * 1000, size: 10, color: getRandomColor(), name };
         socket.emit('updateParticles', particles);
@@ -52,10 +50,41 @@ io.on('connection', (socket) => {
                 }
             });
 
+            for (const id1 in players) {
+                const p1 = players[id1];
+                for (const id2 in players) {
+                    if (id1 === id2) continue;
+                    const p2 = players[id2];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < p1.size + p2.size) {
+                        p1.size -= 2;
+                        p2.size -= 2;
+
+                        const pushFactor = 2;
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        p1.x -= nx * pushFactor;
+                        p1.y -= ny * pushFactor;
+                        p2.x += nx * pushFactor;
+                        p2.y += ny * pushFactor;
+
+                        if (p1.size < 0) {
+                            io.to(id1).emit('playerDied', p1.name);
+                            delete players[id1];
+                        }
+                        if (p2.size < 0) {
+                            io.to(id2).emit('playerDied', p2.name);
+                            delete players[id2];
+                        }
+                    }
+                }
+            }
+
             io.emit('updatePlayers', players);
             io.emit('updateParticles', particles);
 
-            // Emit leaderboard
             const leaderboardData = Object.values(players)
                 .sort((a, b) => b.size - a.size)
                 .map(p => ({ name: p.name, size: p.size }));
@@ -70,7 +99,6 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         delete players[socket.id];
         io.emit('updatePlayers', players);
-        console.log(`Player disconnected: ${socket.id}`);
     });
 });
 

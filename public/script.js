@@ -13,18 +13,13 @@ let playerName = '';
 const mapWidth = 1000;
 const mapHeight = 1000;
 
-// Resize canvas
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// Player movement keys
 const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
-
-// Track all players and particles
 let players = {};
 let particles = [];
 
-// Handle menu play button
 playButton.addEventListener('click', () => {
     const nameInput = document.getElementById('playerName');
     playerName = nameInput.value.trim();
@@ -39,7 +34,6 @@ playButton.addEventListener('click', () => {
     }
 });
 
-// Handle keydown and keyup
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Tab') {
         e.preventDefault();
@@ -53,42 +47,44 @@ window.addEventListener('keydown', (e) => {
 
 window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
-// Send message on Enter
 chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && chatInput.value.trim()) {
         const message = chatInput.value.trim();
         socket.emit('chatMessage', { name: playerName, message });
-        chatInput.value = ''; // Clear input field
+        chatInput.value = '';
     }
 });
 
-// Update chat log
 socket.on('chatMessage', ({ name, message }) => {
     const timestamp = new Date().toLocaleTimeString();
     const chatEntry = document.createElement('div');
     chatEntry.textContent = `[${timestamp}] ${name}: ${message}`;
     chatLog.appendChild(chatEntry);
-    chatLog.scrollTop = chatLog.scrollHeight; // Auto-scroll to bottom
+    chatLog.scrollTop = chatLog.scrollHeight;
 });
 
-// Update players
 socket.on('updatePlayers', (serverPlayers) => {
     players = serverPlayers;
 });
 
-// Update particles
 socket.on('updateParticles', (serverParticles) => {
     particles = serverParticles;
 });
 
-// Update leaderboard
 socket.on('leaderboard', (leaders) => {
     leaderboard.innerHTML = leaders
         .map(player => `<div><strong>${player.name}</strong>: ${player.size}</div>`)
         .join('');
 });
 
-// Game loop
+socket.on('playerDied', (name) => {
+    document.getElementById('playerName').value = name;
+    menu.style.display = 'flex';
+    canvas.style.display = 'none';
+    leaderboard.style.display = 'none';
+    chatBox.style.display = 'none';
+});
+
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -98,19 +94,16 @@ function gameLoop() {
         return;
     }
 
-    // Center view on the player
     const offsetX = canvas.width / 2 - player.x;
     const offsetY = canvas.height / 2 - player.y;
 
     ctx.save();
     ctx.translate(offsetX, offsetY);
 
-    // Draw map boundary
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, mapWidth, mapHeight);
 
-    // Draw particles
     particles.forEach(({ x, y }) => {
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, Math.PI * 2);
@@ -118,7 +111,6 @@ function gameLoop() {
         ctx.fill();
     });
 
-    // Draw players
     for (const id in players) {
         const p = players[id];
         ctx.beginPath();
@@ -126,7 +118,6 @@ function gameLoop() {
         ctx.fillStyle = p.color;
         ctx.fill();
 
-        // Draw player name
         ctx.fillStyle = 'white';
         ctx.font = '12px Arial';
         ctx.fillText(p.name, p.x - 10, p.y - p.size - 5);
@@ -134,7 +125,6 @@ function gameLoop() {
 
     ctx.restore();
 
-    // Send movement data with map boundaries
     if (keys.ArrowUp) socket.emit('move', { dx: 0, dy: -5 });
     if (keys.ArrowDown) socket.emit('move', { dx: 0, dy: 5 });
     if (keys.ArrowLeft) socket.emit('move', { dx: -5, dy: 0 });
