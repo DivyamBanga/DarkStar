@@ -26,7 +26,7 @@ function spawnParticle() {
 
 setInterval(() => {
     if (particles.length < 100) particles.push(spawnParticle());
-}, 1000);
+}, 500);
 
 io.on('connection', (socket) => {
     socket.on('newPlayer', (name) => {
@@ -41,13 +41,21 @@ io.on('connection', (socket) => {
             player.x = Math.min(1000, Math.max(0, player.x + data.dx));
             player.y = Math.min(1000, Math.max(0, player.y + data.dy));
 
-            particles.forEach((particle, index) => {
+            particles = particles.filter(particle => {
                 const dx = player.x - particle.x;
                 const dy = player.y - particle.y;
-                if (Math.sqrt(dx * dx + dy * dy) < player.size) {
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 50) {
                     player.size += 1;
-                    particles.splice(index, 1);
+                    io.to(socket.id).emit('particleAbsorb', {
+                        particleX: particle.x,
+                        particleY: particle.y,
+                        playerX: player.x,
+                        playerY: player.y
+                    });
+                    return false;
                 }
+                return true;
             });
 
             for (const id1 in players) {

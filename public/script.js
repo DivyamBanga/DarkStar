@@ -23,7 +23,6 @@ let particles = [];
 playButton.addEventListener('click', () => {
     const nameInput = document.getElementById('playerName');
     playerName = nameInput.value.trim();
-
     if (playerName) {
         socket.emit('newPlayer', playerName);
         menu.style.display = 'none';
@@ -45,7 +44,9 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+window.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+});
 
 chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && chatInput.value.trim()) {
@@ -85,14 +86,32 @@ socket.on('playerDied', (name) => {
     chatBox.style.display = 'none';
 });
 
-function gameLoop() {
+socket.on('particleAbsorb', ({ particleX, particleY, playerX, playerY }) => {
+    const startTime = performance.now();
+    const duration = 50;
+
+    function animate() {
+        const now = performance.now();
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        const currentX = particleX + (playerX - particleX) * t;
+        const currentY = particleY + (playerY - particleY) * t;
+        drawGame(currentX, currentY);
+        if (t < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            drawGame();
+        }
+    }
+
+    animate();
+});
+
+function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const player = players[socket.id];
-    if (!player) {
-        requestAnimationFrame(gameLoop);
-        return;
-    }
+    if (!player) return;
 
     const offsetX = canvas.width / 2 - player.x;
     const offsetY = canvas.height / 2 - player.y;
@@ -111,6 +130,13 @@ function gameLoop() {
         ctx.fill();
     });
 
+    if (absorbingParticleX !== null && absorbingParticleY !== null) {
+        ctx.beginPath();
+        ctx.arc(absorbingParticleX, absorbingParticleY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = 'yellow';
+        ctx.fill();
+    }
+
     for (const id in players) {
         const p = players[id];
         ctx.beginPath();
@@ -124,12 +150,14 @@ function gameLoop() {
     }
 
     ctx.restore();
+}
 
+function gameLoop() {
+    drawGame();
     if (keys.ArrowUp) socket.emit('move', { dx: 0, dy: -5 });
     if (keys.ArrowDown) socket.emit('move', { dx: 0, dy: 5 });
     if (keys.ArrowLeft) socket.emit('move', { dx: -5, dy: 0 });
     if (keys.ArrowRight) socket.emit('move', { dx: 5, dy: 0 });
-
     requestAnimationFrame(gameLoop);
 }
 
