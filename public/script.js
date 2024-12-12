@@ -88,7 +88,7 @@ socket.on('playerDied', (name) => {
 
 socket.on('particleAbsorb', ({ particleX, particleY, playerX, playerY }) => {
     const startTime = performance.now();
-    const duration = 50;
+    const duration = 200;
 
     function animate() {
         const now = performance.now();
@@ -154,10 +154,10 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
 
 function gameLoop() {
     drawGame();
-    if (keys.ArrowUp) socket.emit('move', { dx: 0, dy: -2 });
-    if (keys.ArrowDown) socket.emit('move', { dx: 0, dy: 2 });
-    if (keys.ArrowLeft) socket.emit('move', { dx: -2, dy: 0 });
-    if (keys.ArrowRight) socket.emit('move', { dx: 2, dy: 0 });
+    if (keys.ArrowUp) socket.emit('move', { dx: 0, dy: -5 });
+    if (keys.ArrowDown) socket.emit('move', { dx: 0, dy: 5 });
+    if (keys.ArrowLeft) socket.emit('move', { dx: -5, dy: 0 });
+    if (keys.ArrowRight) socket.emit('move', { dx: 5, dy: 0 });
     requestAnimationFrame(gameLoop);
 }
 
