@@ -26,7 +26,7 @@ function spawnParticle() {
 
 setInterval(() => {
     if (particles.length < 100) particles.push(spawnParticle());
-}, 1000);
+}, 500);
 
 io.on('connection', (socket) => {
     socket.on('newPlayer', (name) => {
@@ -45,7 +45,7 @@ io.on('connection', (socket) => {
                 const dx = player.x - particle.x;
                 const dy = player.y - particle.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 5) {
+                if (dist < 50) {
                     player.size += 1;
                     io.to(socket.id).emit('particleAbsorb', {
                         particleX: particle.x,
@@ -78,11 +78,11 @@ io.on('connection', (socket) => {
                         p2.x += nx * pushFactor;
                         p2.y += ny * pushFactor;
 
-                        if (p1.size < 0) {
+                        if (p1.size <= 0) {
                             io.to(id1).emit('playerDied', p1.name);
                             delete players[id1];
                         }
-                        if (p2.size < 0) {
+                        if (p2.size <= 0) {
                             io.to(id2).emit('playerDied', p2.name);
                             delete players[id2];
                         }
