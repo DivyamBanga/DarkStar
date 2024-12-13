@@ -1,3 +1,4 @@
+// public/script.js
 const socket = io();
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -20,24 +21,34 @@ const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: f
 let players = {};
 let particles = [];
 
-const playerImage = new Image();
-playerImage.src = '/images/hole1.png';
-
-const particleImage = new Image();
-particleImage.src = '/images/planet1.png';
-
+const holeImages = [];
+const planetImages = [];
 let imagesLoaded = 0;
-const requiredImages = 2;
+const totalImages = 3 + 35;
 
-function startGameIfAllLoaded() {
-    imagesLoaded++;
-    if (imagesLoaded === requiredImages) {
-        gameLoop();
-    }
+for (let i = 1; i <= 3; i++) {
+    const img = new Image();
+    img.onload = () => {
+        imagesLoaded++;
+        if (imagesLoaded === totalImages) {
+            gameLoop();
+        }
+    };
+    img.src = `/images/hole${i}.png`;
+    holeImages.push(img);
 }
 
-playerImage.onload = startGameIfAllLoaded;
-particleImage.onload = startGameIfAllLoaded;
+for (let i = 1; i <= 35; i++) {
+    const img = new Image();
+    img.onload = () => {
+        imagesLoaded++;
+        if (imagesLoaded === totalImages) {
+            gameLoop();
+        }
+    };
+    img.src = `/images/planet${i}.png`;
+    planetImages.push(img);
+}
 
 playButton.addEventListener('click', () => {
     const nameInput = document.getElementById('playerName');
@@ -142,22 +153,22 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, mapWidth, mapHeight);
 
-    particles.forEach(({ x, y }) => {
-        ctx.drawImage(particleImage, x - 5, y - 5, 10, 10);
+    particles.forEach(({ x, y, planetNumber }) => {
+        ctx.drawImage(planetImages[planetNumber - 1], x - 5, y - 5, 10, 10);
     });
 
     if (absorbingParticleX !== null && absorbingParticleY !== null) {
-        ctx.drawImage(particleImage, absorbingParticleX - 5, absorbingParticleY - 5, 10, 10);
+        ctx.drawImage(planetImages[0], absorbingParticleX - 5, absorbingParticleY - 5, 10, 10);
     }
 
     for (const id in players) {
         const p = players[id];
         const size = p.size * 2;
-        ctx.drawImage(playerImage, p.x - size/2, p.y - size/2, size, size);
+        ctx.drawImage(holeImages[p.holeNumber - 1], p.x - size / 2, p.y - size / 2, size, size);
 
         ctx.fillStyle = 'white';
         ctx.font = '12px Arial';
-        ctx.fillText(p.name, p.x - 10, p.y - size/2 - 5);
+        ctx.fillText(p.name, p.x - 10, p.y - size / 2 - 5);
     }
 
     ctx.restore();

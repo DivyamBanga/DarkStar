@@ -1,14 +1,13 @@
 {
-    "name": "multiplayer-game",
-    "version": "1.0.0",
-    "description": "A simple multiplayer game using Socket.IO",
-    "main": "server/server.js",
-    "scripts": {
-      "start": "node server/server.js"
-    },
-    "dependencies": {
-      "express": "^4.18.2",
-      "socket.io": "^4.6.1"
-    }
+  "name": "multiplayer-game",
+  "version": "1.0.0",
+  "description": "A simple multiplayer game using Socket.IO",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1"
   }
-  
+}
