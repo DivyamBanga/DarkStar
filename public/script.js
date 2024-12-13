@@ -1,5 +1,9 @@
 // public/script.js
+
+// Initialize Socket.IO
 const socket = io();
+
+// DOM Elements
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const menu = document.getElementById('menu');
@@ -8,24 +12,25 @@ const chatBox = document.getElementById('chatBox');
 const chatLog = document.getElementById('chatLog');
 const chatInput = document.getElementById('chatInput');
 const leaderboard = document.getElementById('leaderboard');
+
+// Game State
 let chatVisible = false;
 let playerName = '';
-
 const mapWidth = 1000;
 const mapHeight = 1000;
-
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
-
 const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 let players = {};
 let particles = [];
 
+// Image Assets
 const holeImages = [];
 const planetImages = [];
 let imagesLoaded = 0;
 const totalImages = 3 + 35;
 
+// Load Hole Images
 for (let i = 1; i <= 3; i++) {
     const img = new Image();
     img.onload = () => {
@@ -38,6 +43,7 @@ for (let i = 1; i <= 3; i++) {
     holeImages.push(img);
 }
 
+// Load Planet Images
 for (let i = 1; i <= 35; i++) {
     const img = new Image();
     img.onload = () => {
@@ -50,6 +56,7 @@ for (let i = 1; i <= 35; i++) {
     planetImages.push(img);
 }
 
+// Play Button Event Listener
 playButton.addEventListener('click', () => {
     const nameInput = document.getElementById('playerName');
     playerName = nameInput.value.trim();
@@ -63,6 +70,7 @@ playButton.addEventListener('click', () => {
     }
 });
 
+// Keyboard Event Listeners
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Tab') {
         e.preventDefault();
@@ -78,6 +86,7 @@ window.addEventListener('keyup', (e) => {
     keys[e.key] = false;
 });
 
+// Chat Input Event Listener
 chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && chatInput.value.trim()) {
         const message = chatInput.value.trim();
@@ -86,6 +95,7 @@ chatInput.addEventListener('keydown', (e) => {
     }
 });
 
+// Socket Event Listeners
 socket.on('chatMessage', ({ name, message }) => {
     const timestamp = new Date().toLocaleTimeString();
     const chatEntry = document.createElement('div');
@@ -137,6 +147,7 @@ socket.on('particleAbsorb', ({ particleX, particleY, playerX, playerY }) => {
     animate();
 });
 
+// Drawing Function
 function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -149,23 +160,28 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
     ctx.save();
     ctx.translate(offsetX, offsetY);
 
+    // Draw Map Boundary
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, mapWidth, mapHeight);
 
+    // Draw Particles
     particles.forEach(({ x, y, planetNumber }) => {
         ctx.drawImage(planetImages[planetNumber - 1], x - 5, y - 5, 10, 10);
     });
 
+    // Draw Absorbing Particle
     if (absorbingParticleX !== null && absorbingParticleY !== null) {
         ctx.drawImage(planetImages[0], absorbingParticleX - 5, absorbingParticleY - 5, 10, 10);
     }
 
+    // Draw Players
     for (const id in players) {
         const p = players[id];
         const size = p.size * 2;
         ctx.drawImage(holeImages[p.holeNumber - 1], p.x - size / 2, p.y - size / 2, size, size);
 
+        // Draw Player Name
         ctx.fillStyle = 'white';
         ctx.font = '12px Arial';
         ctx.fillText(p.name, p.x - 10, p.y - size / 2 - 5);
@@ -174,6 +190,7 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
     ctx.restore();
 }
 
+// Game Loop
 function gameLoop() {
     drawGame();
     if (keys.ArrowUp) socket.emit('move', { dx: 0, dy: -3 });
