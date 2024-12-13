@@ -20,6 +20,25 @@ const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: f
 let players = {};
 let particles = [];
 
+const playerImage = new Image();
+playerImage.src = '/images/hole1.png';
+
+const particleImage = new Image();
+particleImage.src = '/images/planet1.png';
+
+let imagesLoaded = 0;
+const requiredImages = 2;
+
+function startGameIfAllLoaded() {
+    imagesLoaded++;
+    if (imagesLoaded === requiredImages) {
+        gameLoop();
+    }
+}
+
+playerImage.onload = startGameIfAllLoaded;
+particleImage.onload = startGameIfAllLoaded;
+
 playButton.addEventListener('click', () => {
     const nameInput = document.getElementById('playerName');
     playerName = nameInput.value.trim();
@@ -124,29 +143,21 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
     ctx.strokeRect(0, 0, mapWidth, mapHeight);
 
     particles.forEach(({ x, y }) => {
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = 'yellow';
-        ctx.fill();
+        ctx.drawImage(particleImage, x - 5, y - 5, 10, 10);
     });
 
     if (absorbingParticleX !== null && absorbingParticleY !== null) {
-        ctx.beginPath();
-        ctx.arc(absorbingParticleX, absorbingParticleY, 5, 0, Math.PI * 2);
-        ctx.fillStyle = 'yellow';
-        ctx.fill();
+        ctx.drawImage(particleImage, absorbingParticleX - 5, absorbingParticleY - 5, 10, 10);
     }
 
     for (const id in players) {
         const p = players[id];
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
+        const size = p.size * 2;
+        ctx.drawImage(playerImage, p.x - size/2, p.y - size/2, size, size);
 
         ctx.fillStyle = 'white';
         ctx.font = '12px Arial';
-        ctx.fillText(p.name, p.x - 10, p.y - p.size - 5);
+        ctx.fillText(p.name, p.x - 10, p.y - size/2 - 5);
     }
 
     ctx.restore();
@@ -160,5 +171,3 @@ function gameLoop() {
     if (keys.ArrowRight) socket.emit('move', { dx: 3, dy: 0 });
     requestAnimationFrame(gameLoop);
 }
-
-gameLoop();

@@ -21,7 +21,15 @@ function getRandomColor() {
 }
 
 function spawnParticle() {
-    return { x: Math.random() * 1000, y: Math.random() * 1000 };
+    const sizeMultiplier = Math.ceil(Math.random() * 3);
+    const planetNumber = Math.floor(Math.random() * 35) + 1;
+    return {
+        x: Math.random() * 1000,
+        y: Math.random() * 1000,
+        sizeMultiplier,
+        points: sizeMultiplier,
+        planetNumber
+    };
 }
 
 setInterval(() => {
@@ -30,7 +38,14 @@ setInterval(() => {
 
 io.on('connection', (socket) => {
     socket.on('newPlayer', (name) => {
-        players[socket.id] = { x: Math.random() * 1000, y: Math.random() * 1000, size: 10, color: getRandomColor(), name };
+        players[socket.id] = {
+            x: Math.random() * 1000,
+            y: Math.random() * 1000,
+            size: 10,
+            color: getRandomColor(),
+            name,
+            holeNumber: Math.floor(Math.random() * 3) + 1
+        };
         socket.emit('updateParticles', particles);
         io.emit('updatePlayers', players);
     });
@@ -46,7 +61,7 @@ io.on('connection', (socket) => {
                 const dy = player.y - particle.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < 50) {
-                    player.size += 1;
+                    player.size += particle.points;
                     io.to(socket.id).emit('particleAbsorb', {
                         particleX: particle.x,
                         particleY: particle.y,
