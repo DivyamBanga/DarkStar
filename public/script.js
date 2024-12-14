@@ -51,17 +51,14 @@ function drawStars() {
         const dx = mouse.x - star.x || 0;
         const dy = mouse.y - star.y || 0;
         const distance = Math.sqrt(dx * dx + dy * dy);
-
         if (distance < 100) {
             star.x += dx * 0.02;
             star.y += dy * 0.02;
         }
-
         backgroundCtx.beginPath();
         backgroundCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         backgroundCtx.fillStyle = 'white';
         backgroundCtx.fill();
-
         star.y += star.speed;
         if (star.y > backgroundCanvas.height) star.y = 0;
     }
@@ -74,7 +71,6 @@ let mouseY = 0;
 let isMouseInside = false;
 
 const SPEED_THRESHOLD = 100;
-
 let players = {};
 let particles = [];
 
@@ -152,6 +148,12 @@ chatInput.addEventListener('keydown', (e) => {
     }
 });
 
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Shift') {
+        socket.emit('dash');
+    }
+});
+
 socket.on('mapSize', ({ width, height }) => {
     mapWidth = width;
     mapHeight = height;
@@ -191,7 +193,6 @@ socket.on('playerDied', (name) => {
 socket.on('particleAbsorb', ({ particleX, particleY, playerX, playerY }) => {
     const startTime = performance.now();
     const duration = 50;
-
     function animate() {
         const now = performance.now();
         const elapsed = now - startTime;
@@ -283,8 +284,7 @@ function gameLoop() {
         const dx = mouseX - canvas.width / 2;
         const dy = mouseY - canvas.height / 2;
         const distance = Math.sqrt(dx * dx + dy * dy);
-
-        const playerMaxSpeed = 5 * (10 / player.size);
+        const playerMaxSpeed = (player.isDashing ? 5 * (10 / player.size) * 2 : 5 * (10 / player.size));
         let moveX = 0;
         let moveY = 0;
 
@@ -303,7 +303,6 @@ function gameLoop() {
 
         socket.emit('move', { dx: moveX, dy: moveY });
     }
-
     drawGame();
     requestAnimationFrame(gameLoop);
 }

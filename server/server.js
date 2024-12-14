@@ -15,7 +15,6 @@ app.use(express.static('public'));
 
 const players = {};
 let particles = [];
-
 const MAP_WIDTH = 1000;
 const MAP_HEIGHT = 1000;
 
@@ -71,10 +70,28 @@ io.on('connection', (socket) => {
             name,
             holeNumber: Math.floor(Math.random() * 3) + 1,
             vx: 0,
-            vy: 0
+            vy: 0,
+            isDashing: false,
+            dashEndTime: 0,
+            lastDash: 0,
+            dashCooldown: 500
         };
         socket.emit('updateParticles', particles);
         io.emit('updatePlayers', players);
+    });
+
+    socket.on('dash', () => {
+        const player = players[socket.id];
+        if (!player) return;
+        const now = Date.now();
+        if (now - player.lastDash < player.dashCooldown) return;
+        const hpCost = player.maxHp * 0.05;
+        if (player.hp > hpCost) {
+            player.hp -= hpCost;
+            player.lastDash = now;
+            player.isDashing = true;
+            player.dashEndTime = now + 300;
+        }
     });
 
     socket.on('move', (data) => {
@@ -82,7 +99,8 @@ io.on('connection', (socket) => {
         if (player) {
             let { dx, dy } = data;
             const intendedSpeed = Math.sqrt(dx * dx + dy * dy);
-            const playerMaxSpeed = 5 * (Math.sqrt(player.size));
+            const baseSpeed = 5 * (10 / player.size);
+            const playerMaxSpeed = player.isDashing ? baseSpeed * 2 : baseSpeed;
 
             if (intendedSpeed > playerMaxSpeed) {
                 const scale = playerMaxSpeed / intendedSpeed;
@@ -92,7 +110,6 @@ io.on('connection', (socket) => {
 
             player.x += dx;
             player.y += dy;
-
             player.x = Math.min(MAP_WIDTH, Math.max(0, player.x));
             player.y = Math.min(MAP_HEIGHT, Math.max(0, player.y));
 
@@ -101,13 +118,11 @@ io.on('connection', (socket) => {
                 const pdy = player.y - particle.y;
                 const dist = Math.sqrt(pdx * pdx + pdy * pdy);
                 const attractionRadius = player.size + 15;
-
                 if (dist < attractionRadius) {
                     const angle = Math.atan2(pdy, pdx);
                     const attractionSpeed = 2;
                     particle.x += Math.cos(angle) * attractionSpeed;
                     particle.y += Math.sin(angle) * attractionSpeed;
-
                     const newDist = Math.sqrt((player.x - particle.x) ** 2 + (player.y - particle.y) ** 2);
                     if (newDist < player.size) {
                         const oldRatio = player.hp / player.maxHp;
@@ -126,6 +141,11 @@ io.on('connection', (socket) => {
                 }
                 return true;
             });
+
+            const now = Date.now();
+            if (player.isDashing && now > player.dashEndTime) {
+                player.isDashing = false;
+            }
 
             for (const id1 in players) {
                 const p1 = players[id1];
@@ -175,10 +195,8 @@ io.on('connection', (socket) => {
                         const mass1 = p1.size;
                         const mass2 = p2.size;
                         const totalMass = mass1 + mass2;
-
                         const impulse1 = (force * (mass2 / totalMass));
                         const impulse2 = (force * (mass1 / totalMass));
-
                         p1.vx -= nx * impulse1;
                         p1.vy -= ny * impulse1;
                         p2.vx += nx * impulse2;
