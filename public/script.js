@@ -23,6 +23,66 @@ window.addEventListener('resize', () => {
     }
 });
 
+
+const backgroundCanvas = document.getElementById('backgroundCanvas');
+const backgroundCtx = backgroundCanvas.getContext('2d');
+
+// Ensure background canvas is full-screen
+function resizeCanvas() {
+    backgroundCanvas.width = window.innerWidth;
+    backgroundCanvas.height = window.innerHeight;
+}
+resizeCanvas();
+
+// Generate stars
+const stars = Array.from({ length: 100 }, () => ({
+    x: Math.random() * backgroundCanvas.width,
+    y: Math.random() * backgroundCanvas.height,
+    size: Math.random() * 2 + 1,
+    speed: Math.random() * 0.5 + 0.1,
+}));
+
+// Mouse position
+const mouse = { x: null, y: null };
+window.addEventListener('mousemove', (event) => {
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+});
+
+// Draw stars on background canvas
+function drawStars() {
+    backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+
+    for (const star of stars) {
+        // Move stars towards the mouse
+        const dx = mouse.x - star.x || 0;
+        const dy = mouse.y - star.y || 0;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 100) {
+            star.x += dx * 0.02;
+            star.y += dy * 0.02;
+        }
+
+        // Draw the star
+        backgroundCtx.beginPath();
+        backgroundCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        backgroundCtx.fillStyle = 'white';
+        backgroundCtx.fill();
+
+        // Move stars slightly downward
+        star.y += star.speed;
+        if (star.y > backgroundCanvas.height) star.y = 0;
+    }
+    requestAnimationFrame(drawStars);
+}
+
+
+drawStars();
+
+
+
+
 let mouseX = 0;
 let mouseY = 0;
 let isMouseInside = false;
@@ -72,7 +132,7 @@ function checkAllImagesLoaded() {
 
 playButton.addEventListener('click', () => {
     const nameInput = document.getElementById('playerName');
-    playerName = nameInput.value.trim() || 'Un Un Un';
+    playerName = nameInput.value.trim() || 'UnNamed';
     socket.emit('newPlayer', playerName);
     menu.style.display = 'none';
     canvas.style.display = 'block';
@@ -239,6 +299,7 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
 }
 
 function gameLoop() {
+    isIntroScreen = false;
     const player = players[socket.id];
     if (player) {
         const dx = mouseX - canvas.width / 2;

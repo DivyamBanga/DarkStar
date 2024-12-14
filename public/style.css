@@ -8,6 +8,10 @@ body {
 
 canvas {
     display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
 }
 
 #menu {
@@ -16,7 +20,9 @@ canvas {
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background-color: #222;
+    z-index: 1;
+    position: relative;
+    background-color: rgba(0, 0, 0, 0.5);
     color: white;
     font-family: Arial, sans-serif;
 }
@@ -25,12 +31,24 @@ canvas {
     margin: 10px 0;
     padding: 10px;
     font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    outline: none;
 }
 
 #menu button {
     padding: 10px 20px;
     font-size: 16px;
     cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: #444;
+    color: white;
+    transition: background-color 0.3s;
+}
+
+#menu button:hover {
+    background-color: #666;
 }
 
 #chatBox {
@@ -77,4 +95,12 @@ canvas {
     max-height: 300px;
     overflow-y: auto;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+
+#backgroundCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Ensure it stays behind other elements */
 }
