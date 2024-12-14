@@ -1,5 +1,3 @@
-// public/script.js
-
 /**
  * Multiplayer Game Script
  * Handles client-side rendering, user input, and communication with the server via Socket.IO.
@@ -17,8 +15,8 @@ const leaderboard = document.getElementById('leaderboard');
 let chatVisible = false;
 let playerName = '';
 
-const mapWidth = 1000;
-const mapHeight = 1000;
+let mapWidth = 1000; // Default value, will be updated from server
+let mapHeight = 1000; // Default value, will be updated from server
 
 // Set canvas dimensions to window size
 canvas.width = window.innerWidth;
@@ -89,16 +87,12 @@ function checkAllImagesLoaded() {
 // Play Button Event Listener
 playButton.addEventListener('click', () => {
     const nameInput = document.getElementById('playerName');
-    playerName = nameInput.value.trim();
-    if (playerName) {
-        socket.emit('newPlayer', playerName);
-        menu.style.display = 'none';
-        canvas.style.display = 'block';
-        leaderboard.style.display = 'block';
-        chatBox.style.display = 'flex';
-    } else {
-        alert('Please enter a name.');
-    }
+    playerName = nameInput.value.trim() || 'Un Un Un';
+    socket.emit('newPlayer', playerName);
+    menu.style.display = 'none';
+    canvas.style.display = 'block';
+    leaderboard.style.display = 'block';
+    chatBox.style.display = 'flex';
 });
 
 // Mouse Enter and Leave Event Listeners
@@ -133,6 +127,14 @@ chatInput.addEventListener('keydown', (e) => {
 });
 
 // Socket Event Listeners
+
+// Receive map size from server
+socket.on('mapSize', ({ width, height }) => {
+    mapWidth = width;
+    mapHeight = height;
+    // Optionally, adjust background image or other elements based on new map size
+    drawGame();
+});
 
 // Receive chat messages
 socket.on('chatMessage', ({ name, message }) => {

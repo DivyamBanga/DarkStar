@@ -1,5 +1,3 @@
-// server/server.js
-
 /**
  * Multiplayer Game Server
  * Handles client connections, game state management, and real-time communication via Socket.IO.
@@ -23,6 +21,10 @@ let particles = [];
 // Constants
 const MAX_SPEED = 5; // Maximum movement speed (pixels per frame)
 
+// Map Size Configuration
+const MAP_WIDTH = 1000; // Adjustable map width
+const MAP_HEIGHT = 1000; // Adjustable map height
+
 // Utility Functions
 function getRandomColor() {
     const letters = '0123456789ABCDEF';
@@ -39,8 +41,8 @@ function spawnParticle() {
     const points = Math.ceil(Math.random() * 3); // 1, 2, or 3 points
 
     return {
-        x: Math.random() * 1000,
-        y: Math.random() * 1000,
+        x: Math.random() * MAP_WIDTH,
+        y: Math.random() * MAP_HEIGHT,
         sizeMultiplier, // Determines visual size on client-side
         points,          // Points awarded upon absorption
         planetNumber
@@ -54,11 +56,14 @@ setInterval(() => {
 
 // Handle Socket Connections
 io.on('connection', (socket) => {
+    // Send map size to the newly connected client
+    socket.emit('mapSize', { width: MAP_WIDTH, height: MAP_HEIGHT });
+
     // New Player Joins
     socket.on('newPlayer', (name) => {
         players[socket.id] = {
-            x: Math.random() * 1000,
-            y: Math.random() * 1000,
+            x: Math.random() * MAP_WIDTH,
+            y: Math.random() * MAP_HEIGHT,
             size: 10,
             color: getRandomColor(),
             name,
@@ -91,8 +96,8 @@ io.on('connection', (socket) => {
             player.y += dy;
 
             // Ensure player stays within bounds
-            player.x = Math.min(1000, Math.max(0, player.x));
-            player.y = Math.min(1000, Math.max(0, player.y));
+            player.x = Math.min(MAP_WIDTH, Math.max(0, player.x));
+            player.y = Math.min(MAP_HEIGHT, Math.max(0, player.y));
 
             // Handle Particle Attraction and Absorption
             particles = particles.filter(particle => {
@@ -183,8 +188,8 @@ io.on('connection', (socket) => {
                     p.vy *= friction;
                     p.x += p.vx;
                     p.y += p.vy;
-                    p.x = Math.max(0, Math.min(1000, p.x));
-                    p.y = Math.max(0, Math.min(1000, p.y));
+                    p.x = Math.max(0, Math.min(MAP_WIDTH, p.x));
+                    p.y = Math.max(0, Math.min(MAP_HEIGHT, p.y));
                 }
             }
 
