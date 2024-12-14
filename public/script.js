@@ -23,18 +23,15 @@ window.addEventListener('resize', () => {
     }
 });
 
-
 const backgroundCanvas = document.getElementById('backgroundCanvas');
 const backgroundCtx = backgroundCanvas.getContext('2d');
 
-// Ensure background canvas is full-screen
 function resizeCanvas() {
     backgroundCanvas.width = window.innerWidth;
     backgroundCanvas.height = window.innerHeight;
 }
 resizeCanvas();
 
-// Generate stars
 const stars = Array.from({ length: 100 }, () => ({
     x: Math.random() * backgroundCanvas.width,
     y: Math.random() * backgroundCanvas.height,
@@ -42,19 +39,15 @@ const stars = Array.from({ length: 100 }, () => ({
     speed: Math.random() * 0.5 + 0.1,
 }));
 
-// Mouse position
 const mouse = { x: null, y: null };
 window.addEventListener('mousemove', (event) => {
     mouse.x = event.clientX;
     mouse.y = event.clientY;
 });
 
-// Draw stars on background canvas
 function drawStars() {
     backgroundCtx.clearRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
-
     for (const star of stars) {
-        // Move stars towards the mouse
         const dx = mouse.x - star.x || 0;
         const dy = mouse.y - star.y || 0;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -64,29 +57,22 @@ function drawStars() {
             star.y += dy * 0.02;
         }
 
-        // Draw the star
         backgroundCtx.beginPath();
         backgroundCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         backgroundCtx.fillStyle = 'white';
         backgroundCtx.fill();
 
-        // Move stars slightly downward
         star.y += star.speed;
         if (star.y > backgroundCanvas.height) star.y = 0;
     }
     requestAnimationFrame(drawStars);
 }
-
-
 drawStars();
-
-
-
 
 let mouseX = 0;
 let mouseY = 0;
 let isMouseInside = false;
-const MAX_SPEED = 5;
+
 const SPEED_THRESHOLD = 100;
 
 let players = {};
@@ -219,24 +205,18 @@ socket.on('particleAbsorb', ({ particleX, particleY, playerX, playerY }) => {
             drawGame();
         }
     }
-
     animate();
 });
 
 function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     const player = players[socket.id];
     if (!player) return;
-
     const offsetX = canvas.width / 2 - player.x;
     const offsetY = canvas.height / 2 - player.y;
-
     ctx.save();
     ctx.translate(offsetX, offsetY);
-
     ctx.drawImage(backgroundImage, 0, 0, mapWidth, mapHeight);
-
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, mapWidth, mapHeight);
@@ -294,30 +274,29 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
             ctx.fillRect(barX, barY, currentHpWidth, 5);
         }
     }
-
     ctx.restore();
 }
 
 function gameLoop() {
-    isIntroScreen = false;
     const player = players[socket.id];
     if (player) {
         const dx = mouseX - canvas.width / 2;
         const dy = mouseY - canvas.height / 2;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
+        const playerMaxSpeed = 5 * (10 / player.size);
         let moveX = 0;
         let moveY = 0;
 
         if (distance >= SPEED_THRESHOLD) {
             const normX = dx / distance;
             const normY = dy / distance;
-            moveX = normX * MAX_SPEED;
-            moveY = normY * MAX_SPEED;
+            moveX = normX * playerMaxSpeed;
+            moveY = normY * playerMaxSpeed;
         } else if (distance > 0) {
             const normX = dx / distance;
             const normY = dy / distance;
-            const speed = (distance / SPEED_THRESHOLD) * MAX_SPEED;
+            const speed = (distance / SPEED_THRESHOLD) * playerMaxSpeed;
             moveX = normX * speed;
             moveY = normY * speed;
         }

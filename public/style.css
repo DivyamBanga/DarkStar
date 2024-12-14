@@ -97,10 +97,9 @@ canvas {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
-
 #backgroundCanvas {
     position: absolute;
     top: 0;
     left: 0;
-    z-index: -1; /* Ensure it stays behind other elements */
+    z-index: -1;
 }

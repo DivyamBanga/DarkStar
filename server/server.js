@@ -1,3 +1,8 @@
+/*
+File: server.js
+Description: Server-side code for Star.io
+*/
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -11,10 +16,8 @@ app.use(express.static('public'));
 const players = {};
 let particles = [];
 
-const MAX_SPEED = 5;
 const MAP_WIDTH = 1000;
 const MAP_HEIGHT = 1000;
-const REGEN = 1; // 1% per second
 
 function getRandomColor() {
     const letters = '0123456789ABCDEF';
@@ -42,11 +45,11 @@ setInterval(() => {
     if (particles.length < 100) particles.push(spawnParticle());
 }, 500);
 
-// Regen interval
 setInterval(() => {
     for (const id in players) {
         const p = players[id];
-        const regenAmount = p.maxHp * (REGEN / 100);
+        const regenFactor = (10 / p.size);
+        const regenAmount = p.maxHp * (regenFactor / 100);
         p.hp = Math.min(p.hp + regenAmount, p.maxHp);
     }
     io.emit('updatePlayers', players);
@@ -79,9 +82,10 @@ io.on('connection', (socket) => {
         if (player) {
             let { dx, dy } = data;
             const intendedSpeed = Math.sqrt(dx * dx + dy * dy);
+            const playerMaxSpeed = 5 * (Math.sqrt(player.size));
 
-            if (intendedSpeed > MAX_SPEED) {
-                const scale = MAX_SPEED / intendedSpeed;
+            if (intendedSpeed > playerMaxSpeed) {
+                const scale = playerMaxSpeed / intendedSpeed;
                 dx *= scale;
                 dy *= scale;
             }
@@ -133,8 +137,8 @@ io.on('connection', (socket) => {
                     const dist = Math.sqrt(dx * dx + dy * dy);
 
                     if (dist < p1.size + p2.size && dist > 0) {
-                        const damageToP1 = Math.ceil(p2.size);
-                        const damageToP2 = Math.ceil(p1.size);
+                        const damageToP1 = Math.min(Math.ceil(p2.size), p1.size * 3 / 10 + 1);
+                        const damageToP2 = Math.min(Math.ceil(p1.size), p2.size * 3 / 10 + 1);
                         p1.hp -= damageToP1;
                         p2.hp -= damageToP2;
 
