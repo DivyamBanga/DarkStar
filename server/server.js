@@ -14,6 +14,7 @@ let particles = [];
 const MAX_SPEED = 5;
 const MAP_WIDTH = 1000;
 const MAP_HEIGHT = 1000;
+const REGEN = 1; // 1% per second
 
 function getRandomColor() {
     const letters = '0123456789ABCDEF';
@@ -40,6 +41,16 @@ function spawnParticle() {
 setInterval(() => {
     if (particles.length < 100) particles.push(spawnParticle());
 }, 500);
+
+// Regen interval
+setInterval(() => {
+    for (const id in players) {
+        const p = players[id];
+        const regenAmount = p.maxHp * (REGEN / 100);
+        p.hp = Math.min(p.hp + regenAmount, p.maxHp);
+    }
+    io.emit('updatePlayers', players);
+}, 1000);
 
 io.on('connection', (socket) => {
     socket.emit('mapSize', { width: MAP_WIDTH, height: MAP_HEIGHT });
@@ -95,8 +106,10 @@ io.on('connection', (socket) => {
 
                     const newDist = Math.sqrt((player.x - particle.x) ** 2 + (player.y - particle.y) ** 2);
                     if (newDist < player.size) {
+                        const oldRatio = player.hp / player.maxHp;
                         player.size += particle.points;
                         player.maxHp = Math.ceil(player.size * 10);
+                        player.hp = oldRatio * player.maxHp;
                         player.hp = Math.min(player.hp + (particle.points * 5), player.maxHp);
                         io.to(socket.id).emit('particleAbsorb', {
                             particleX: particle.x,
@@ -130,8 +143,10 @@ io.on('connection', (socket) => {
                             delete players[id1];
                             if (players[id2]) {
                                 const killer = players[id2];
+                                const oldRatio = killer.hp / killer.maxHp;
                                 killer.size *= 1.1;
                                 killer.maxHp = Math.ceil(killer.size * 10);
+                                killer.hp = oldRatio * killer.maxHp;
                                 killer.hp = Math.min(killer.hp + Math.ceil(killer.maxHp * 0.2), killer.maxHp);
                             }
                             continue;
@@ -141,8 +156,10 @@ io.on('connection', (socket) => {
                             delete players[id2];
                             if (players[id1]) {
                                 const killer = players[id1];
+                                const oldRatio = killer.hp / killer.maxHp;
                                 killer.size *= 1.1;
                                 killer.maxHp = Math.ceil(killer.size * 10);
+                                killer.hp = oldRatio * killer.maxHp;
                                 killer.hp = Math.min(killer.hp + Math.ceil(killer.maxHp * 0.2), killer.maxHp);
                             }
                             continue;

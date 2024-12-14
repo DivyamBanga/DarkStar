@@ -195,7 +195,7 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
 
     if (absorbingParticleX !== null && absorbingParticleY !== null) {
         const baseSize = 10;
-        const size = baseSize * 1;
+        const size = baseSize;
         ctx.drawImage(
             planetImages[0],
             absorbingParticleX - size / 2,
