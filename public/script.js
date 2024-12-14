@@ -132,7 +132,7 @@ function checkAllImagesLoaded() {
 
 playButton.addEventListener('click', () => {
     const nameInput = document.getElementById('playerName');
-    playerName = nameInput.value.trim() || 'UnNamed';
+    playerName = nameInput.value.trim() || 'Player';
     socket.emit('newPlayer', playerName);
     menu.style.display = 'none';
     canvas.style.display = 'block';
@@ -190,7 +190,7 @@ socket.on('updateParticles', (serverParticles) => {
 
 socket.on('leaderboard', (leaders) => {
     leaderboard.innerHTML = leaders
-        .map(player => `<div><strong>${player.name}</strong>: ${player.size}</div>`)
+        .map(player => `<div><strong>${player.name}</strong>: ${Math.round(player.size)}</div>`)
         .join('');
 });
 
