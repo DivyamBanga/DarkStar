@@ -107,7 +107,7 @@ io.on('connection', (socket) => {
                     const newDist = Math.sqrt((player.x - particle.x) ** 2 + (player.y - particle.y) ** 2);
                     if (newDist < player.size) {
                         const oldRatio = player.hp / player.maxHp;
-                        player.size += particle.points;
+                        player.size += particle.points / 4;
                         player.maxHp = Math.ceil(player.size * 10);
                         player.hp = oldRatio * player.maxHp;
                         player.hp = Math.min(player.hp + (particle.points * 5), player.maxHp);
