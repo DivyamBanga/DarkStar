@@ -90,7 +90,7 @@ io.on('connection', (socket) => {
             player.hp -= hpCost;
             player.lastDash = now;
             player.isDashing = true;
-            player.dashEndTime = now + 300;
+            player.dashEndTime = now + 400;
         }
     });
 

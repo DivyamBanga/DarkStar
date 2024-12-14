@@ -284,7 +284,7 @@ function gameLoop() {
         const dx = mouseX - canvas.width / 2;
         const dy = mouseY - canvas.height / 2;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const playerMaxSpeed = (player.isDashing ? 5 * (10 / player.size) * 2 : 5 * (10 / player.size));
+        const playerMaxSpeed = (player.isDashing ? 5 * (10 / Math.sqrt(player.size)) * 2 : 5 * (10 / player.size));
         let moveX = 0;
         let moveY = 0;
 
