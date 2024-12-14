@@ -144,7 +144,7 @@ io.on('connection', (socket) => {
                             if (players[id2]) {
                                 const killer = players[id2];
                                 const oldRatio = killer.hp / killer.maxHp;
-                                killer.size *= 1.1;
+                                killer.size += p1.size;
                                 killer.maxHp = Math.ceil(killer.size * 10);
                                 killer.hp = oldRatio * killer.maxHp;
                                 killer.hp = Math.min(killer.hp + Math.ceil(killer.maxHp * 0.2), killer.maxHp);
@@ -157,7 +157,7 @@ io.on('connection', (socket) => {
                             if (players[id1]) {
                                 const killer = players[id1];
                                 const oldRatio = killer.hp / killer.maxHp;
-                                killer.size *= 1.1;
+                                killer.size += p2.size;
                                 killer.maxHp = Math.ceil(killer.size * 10);
                                 killer.hp = oldRatio * killer.maxHp;
                                 killer.hp = Math.min(killer.hp + Math.ceil(killer.maxHp * 0.2), killer.maxHp);
