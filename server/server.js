@@ -1,10 +1,14 @@
 // server/server.js
 
+/**
+ * Multiplayer Game Server
+ * Handles client connections, game state management, and real-time communication via Socket.IO.
+ */
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 
-// Initialize Express App and HTTP Server
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -15,6 +19,9 @@ app.use(express.static('public'));
 // Game State
 const players = {};
 let particles = [];
+
+// Constants
+const MAX_SPEED = 5; // Maximum movement speed (pixels per frame)
 
 // Utility Functions
 function getRandomColor() {
@@ -27,13 +34,15 @@ function getRandomColor() {
 }
 
 function spawnParticle() {
-    const sizeMultiplier = Math.ceil(Math.random() * 3);
+    const sizeMultiplier = Math.ceil(Math.random() * 3); // 1, 2, or 3
     const planetNumber = Math.floor(Math.random() * 35) + 1;
+    const points = Math.ceil(Math.random() * 3); // 1, 2, or 3 points
+
     return {
         x: Math.random() * 1000,
         y: Math.random() * 1000,
-        sizeMultiplier,
-        points: sizeMultiplier,
+        sizeMultiplier, // Determines visual size on client-side
+        points,          // Points awarded upon absorption
         planetNumber
     };
 }
@@ -53,7 +62,9 @@ io.on('connection', (socket) => {
             size: 10,
             color: getRandomColor(),
             name,
-            holeNumber: Math.floor(Math.random() * 3) + 1
+            holeNumber: Math.floor(Math.random() * 3) + 1,
+            vx: 0, // Velocity in x-direction
+            vy: 0  // Velocity in y-direction
         };
         socket.emit('updateParticles', particles);
         io.emit('updatePlayers', players);
@@ -63,28 +74,43 @@ io.on('connection', (socket) => {
     socket.on('move', (data) => {
         const player = players[socket.id];
         if (player) {
-            // Update Player Position
-            player.x = Math.min(1000, Math.max(0, player.x + data.dx));
-            player.y = Math.min(1000, Math.max(0, player.y + data.dy));
+            let { dx, dy } = data;
+
+            // Calculate the intended speed
+            const intendedSpeed = Math.sqrt(dx * dx + dy * dy);
+
+            if (intendedSpeed > MAX_SPEED) {
+                // Scale dx and dy to enforce maximum speed
+                const scale = MAX_SPEED / intendedSpeed;
+                dx *= scale;
+                dy *= scale;
+            }
+
+            // Update Player Position based on validated movement
+            player.x += dx;
+            player.y += dy;
+
+            // Ensure player stays within bounds
+            player.x = Math.min(1000, Math.max(0, player.x));
+            player.y = Math.min(1000, Math.max(0, player.y));
 
             // Handle Particle Attraction and Absorption
             particles = particles.filter(particle => {
-                const dx = player.x - particle.x;
-                const dy = player.y - particle.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                const pdx = player.x - particle.x;
+                const pdy = player.y - particle.y;
+                const dist = Math.sqrt(pdx * pdx + pdy * pdy);
                 const attractionRadius = player.size + 15;
 
                 if (dist < attractionRadius) {
-                    // Calculate Direction Towards Player
-                    const angle = Math.atan2(dy, dx);
+                    // Move particle towards player
+                    const angle = Math.atan2(pdy, pdx);
                     const attractionSpeed = 2; // Pixels per update
                     particle.x += Math.cos(angle) * attractionSpeed;
                     particle.y += Math.sin(angle) * attractionSpeed;
 
-                    // Check if Particle Reached Player
+                    // Check if particle is absorbed
                     const newDist = Math.sqrt((player.x - particle.x) ** 2 + (player.y - particle.y) ** 2);
                     if (newDist < player.size) {
-                        // Absorb Particle
                         player.size += particle.points;
                         io.to(socket.id).emit('particleAbsorb', {
                             particleX: particle.x,
@@ -95,11 +121,10 @@ io.on('connection', (socket) => {
                         return false; // Remove particle
                     }
                 }
-
                 return true; // Keep particle
             });
 
-            // Handle Player Collisions
+            // Handle Player Collisions with Smooth Knockback
             for (const id1 in players) {
                 const p1 = players[id1];
                 for (const id2 in players) {
@@ -108,31 +133,62 @@ io.on('connection', (socket) => {
                     const dx = p2.x - p1.x;
                     const dy = p2.y - p1.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < p1.size + p2.size) {
+
+                    if (dist < p1.size + p2.size && dist > 0) {
+                        // Both players lose size
                         p1.size -= 2;
                         p2.size -= 2;
 
-                        const pushFactor = 2;
-                        const nx = dx / dist;
-                        const ny = dy / dist;
-                        p1.x -= nx * pushFactor;
-                        p1.y -= ny * pushFactor;
-                        p2.x += nx * pushFactor;
-                        p2.y += ny * pushFactor;
-
+                        // Ensure they don't go negative
                         if (p1.size <= 0) {
                             io.to(id1).emit('playerDied', p1.name);
                             delete players[id1];
+                            continue;
                         }
                         if (p2.size <= 0) {
                             io.to(id2).emit('playerDied', p2.name);
                             delete players[id2];
+                            continue;
                         }
+
+                        // Calculate knockback using mass (mass ~ size)
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        // Impulse strength
+                        const force = 5;
+                        const mass1 = p1.size;
+                        const mass2 = p2.size;
+                        const totalMass = mass1 + mass2;
+
+                        // Velocity changes inversely proportional to size (mass)
+                        const impulse1 = (force * (mass2 / totalMass));
+                        const impulse2 = (force * (mass1 / totalMass));
+
+                        // Apply impulses in opposite directions
+                        p1.vx -= nx * impulse1;
+                        p1.vy -= ny * impulse1;
+                        p2.vx += nx * impulse2;
+                        p2.vy += ny * impulse2;
                     }
                 }
             }
 
-            // Update Game State to Clients
+            // Apply Velocity and Friction
+            const friction = 0.95;
+            for (const id in players) {
+                const p = players[id];
+                if (typeof p.vx === 'number' && typeof p.vy === 'number') {
+                    p.vx *= friction;
+                    p.vy *= friction;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.x = Math.max(0, Math.min(1000, p.x));
+                    p.y = Math.max(0, Math.min(1000, p.y));
+                }
+            }
+
+            // Emit updated game state
             io.emit('updatePlayers', players);
             io.emit('updateParticles', particles);
 

@@ -1,4 +1,10 @@
 /* public/style.css */
+
+/**
+ * Multiplayer Game Styles
+ * Defines the layout, appearance, and responsiveness of game elements.
+ */
+
 body {
     margin: 0;
     overflow: hidden;

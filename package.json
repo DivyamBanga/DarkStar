@@ -1,7 +1,7 @@
 {
   "name": "multiplayer-game",
   "version": "1.0.0",
-  "description": "A simple multiplayer game using Socket.IO",
+  "description": "A simple multiplayer game using Socket.IO with variable particle sizes and points.",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js"

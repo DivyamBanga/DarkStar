@@ -1,9 +1,11 @@
 // public/script.js
 
-// Initialize Socket.IO
-const socket = io();
+/**
+ * Multiplayer Game Script
+ * Handles client-side rendering, user input, and communication with the server via Socket.IO.
+ */
 
-// DOM Elements
+const socket = io();
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const menu = document.getElementById('menu');
@@ -12,32 +14,48 @@ const chatBox = document.getElementById('chatBox');
 const chatLog = document.getElementById('chatLog');
 const chatInput = document.getElementById('chatInput');
 const leaderboard = document.getElementById('leaderboard');
-
-// Game State
 let chatVisible = false;
 let playerName = '';
+
 const mapWidth = 1000;
 const mapHeight = 1000;
+
+// Set canvas dimensions to window size
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
-const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    if (imagesLoaded === totalImages) {
+        drawGame();
+    }
+});
+
+// Player movement variables
+let mouseX = 0;
+let mouseY = 0;
+let isMouseInside = false;
+const MAX_SPEED = 5; // Maximum movement speed (pixels per frame)
+const SPEED_THRESHOLD = 100; // Distance threshold (pixels)
+
 let players = {};
 let particles = [];
 
 // Image Assets
 const holeImages = [];
 const planetImages = [];
+let backgroundImage = new Image();
 let imagesLoaded = 0;
-const totalImages = 3 + 35;
+const totalImages = 3 + 35 + 1; // holes + planets + background
 
 // Load Hole Images
 for (let i = 1; i <= 3; i++) {
     const img = new Image();
     img.onload = () => {
         imagesLoaded++;
-        if (imagesLoaded === totalImages) {
-            gameLoop();
-        }
+        checkAllImagesLoaded();
     };
     img.src = `/images/hole${i}.png`;
     holeImages.push(img);
@@ -48,12 +66,24 @@ for (let i = 1; i <= 35; i++) {
     const img = new Image();
     img.onload = () => {
         imagesLoaded++;
-        if (imagesLoaded === totalImages) {
-            gameLoop();
-        }
+        checkAllImagesLoaded();
     };
     img.src = `/images/planet${i}.png`;
     planetImages.push(img);
+}
+
+// Load Background Image
+backgroundImage.onload = () => {
+    imagesLoaded++;
+    checkAllImagesLoaded();
+};
+backgroundImage.src = '/images/background.png';
+
+// Function to check if all images are loaded
+function checkAllImagesLoaded() {
+    if (imagesLoaded === totalImages) {
+        gameLoop();
+    }
 }
 
 // Play Button Event Listener
@@ -65,25 +95,32 @@ playButton.addEventListener('click', () => {
         menu.style.display = 'none';
         canvas.style.display = 'block';
         leaderboard.style.display = 'block';
+        chatBox.style.display = 'flex';
     } else {
         alert('Please enter a name.');
     }
 });
 
-// Keyboard Event Listeners
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') {
-        e.preventDefault();
-        chatVisible = !chatVisible;
-        chatBox.style.display = chatVisible ? 'flex' : 'none';
-        if (chatVisible) chatInput.focus();
-    } else {
-        keys[e.key] = true;
-    }
+// Mouse Enter and Leave Event Listeners
+canvas.addEventListener('mouseenter', () => {
+    isMouseInside = true;
 });
 
-window.addEventListener('keyup', (e) => {
-    keys[e.key] = false;
+canvas.addEventListener('mouseleave', () => {
+    isMouseInside = false;
+    // Reset mouse position to center to stop movement when mouse leaves
+    mouseX = canvas.width / 2;
+    mouseY = canvas.height / 2;
+});
+
+// Mouse Move Event Listener
+canvas.addEventListener('mousemove', (e) => {
+    if (isMouseInside) {
+        const rect = canvas.getBoundingClientRect();
+        // Calculate mouse position relative to the canvas
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+    }
 });
 
 // Chat Input Event Listener
@@ -96,6 +133,8 @@ chatInput.addEventListener('keydown', (e) => {
 });
 
 // Socket Event Listeners
+
+// Receive chat messages
 socket.on('chatMessage', ({ name, message }) => {
     const timestamp = new Date().toLocaleTimeString();
     const chatEntry = document.createElement('div');
@@ -104,20 +143,24 @@ socket.on('chatMessage', ({ name, message }) => {
     chatLog.scrollTop = chatLog.scrollHeight;
 });
 
+// Update players
 socket.on('updatePlayers', (serverPlayers) => {
     players = serverPlayers;
 });
 
+// Update particles
 socket.on('updateParticles', (serverParticles) => {
     particles = serverParticles;
 });
 
+// Update leaderboard
 socket.on('leaderboard', (leaders) => {
     leaderboard.innerHTML = leaders
         .map(player => `<div><strong>${player.name}</strong>: ${player.size}</div>`)
         .join('');
 });
 
+// Handle player death
 socket.on('playerDied', (name) => {
     document.getElementById('playerName').value = name;
     menu.style.display = 'flex';
@@ -126,9 +169,10 @@ socket.on('playerDied', (name) => {
     chatBox.style.display = 'none';
 });
 
+// Handle particle absorption animation
 socket.on('particleAbsorb', ({ particleX, particleY, playerX, playerY }) => {
     const startTime = performance.now();
-    const duration = 50;
+    const duration = 50; // Animation duration in ms
 
     function animate() {
         const now = performance.now();
@@ -160,26 +204,51 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
     ctx.save();
     ctx.translate(offsetX, offsetY);
 
+    // Draw Background Image
+    ctx.drawImage(backgroundImage, 0, 0, mapWidth, mapHeight);
+
     // Draw Map Boundary
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, mapWidth, mapHeight);
 
-    // Draw Particles
-    particles.forEach(({ x, y, planetNumber }) => {
-        ctx.drawImage(planetImages[planetNumber - 1], x - 5, y - 5, 10, 10);
+    // Draw Particles with Variable Sizes
+    particles.forEach(({ x, y, planetNumber, sizeMultiplier }) => {
+        const baseSize = 10; // Base size in pixels
+        const size = baseSize * sizeMultiplier; // Scale size based on sizeMultiplier
+        ctx.drawImage(
+            planetImages[planetNumber - 1],
+            x - size / 2,
+            y - size / 2,
+            size,
+            size
+        );
     });
 
     // Draw Absorbing Particle
     if (absorbingParticleX !== null && absorbingParticleY !== null) {
-        ctx.drawImage(planetImages[0], absorbingParticleX - 5, absorbingParticleY - 5, 10, 10);
+        const baseSize = 10;
+        const size = baseSize * 1; // Default size for absorbing particle
+        ctx.drawImage(
+            planetImages[0],
+            absorbingParticleX - size / 2,
+            absorbingParticleY - size / 2,
+            size,
+            size
+        );
     }
 
     // Draw Players
     for (const id in players) {
         const p = players[id];
         const size = p.size * 2;
-        ctx.drawImage(holeImages[p.holeNumber - 1], p.x - size / 2, p.y - size / 2, size, size);
+        ctx.drawImage(
+            holeImages[p.holeNumber - 1],
+            p.x - size / 2,
+            p.y - size / 2,
+            size,
+            size
+        );
 
         // Draw Player Name
         ctx.fillStyle = 'white';
@@ -192,10 +261,35 @@ function drawGame(absorbingParticleX = null, absorbingParticleY = null) {
 
 // Game Loop
 function gameLoop() {
+    const player = players[socket.id];
+    if (player) {
+        // Calculate direction vector from player to mouse position
+        const dx = mouseX - canvas.width / 2;
+        const dy = mouseY - canvas.height / 2;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        let moveX = 0;
+        let moveY = 0;
+
+        if (distance >= SPEED_THRESHOLD) {
+            // Mouse is beyond the threshold; set movement to MAX_SPEED
+            const normX = dx / distance;
+            const normY = dy / distance;
+            moveX = normX * MAX_SPEED;
+            moveY = normY * MAX_SPEED;
+        } else if (distance > 0) {
+            // Mouse is within the threshold; scale speed proportionally
+            const normX = dx / distance;
+            const normY = dy / distance;
+            const speed = (distance / SPEED_THRESHOLD) * MAX_SPEED;
+            moveX = normX * speed;
+            moveY = normY * speed;
+        }
+
+        // Emit move event with calculated dx and dy
+        socket.emit('move', { dx: moveX, dy: moveY });
+    }
+
     drawGame();
-    if (keys.ArrowUp) socket.emit('move', { dx: 0, dy: -3 });
-    if (keys.ArrowDown) socket.emit('move', { dx: 0, dy: 3 });
-    if (keys.ArrowLeft) socket.emit('move', { dx: -3, dy: 0 });
-    if (keys.ArrowRight) socket.emit('move', { dx: 3, dy: 0 });
     requestAnimationFrame(gameLoop);
 }
