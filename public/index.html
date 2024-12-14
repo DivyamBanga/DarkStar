@@ -1,24 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Game</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Star.io</title>
+  <link rel="stylesheet" href="public/styles.css">
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #000000;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    .stars {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #000000;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .star {
+      position: absolute;
+      background-color: white;
+      border-radius: 50%;
+      opacity: 0.8;
+    }
+    .intro-container {
+      text-align: center;
+      color: #ffffff;
+      z-index: 1;
+    }
+    .intro-container h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    .intro-container input {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      border: none;
+      border-radius: 5px;
+      width: 70%;
+    }
+    .intro-container button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      color: #ffffff;
+      background-color: #007bff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .intro-container button:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
-    <div id="menu">
-        <h1>Multiplayer Game</h1>
-        <input type="text" id="playerName" placeholder="Enter your name">
-        <button id="playButton">Play</button>
-    </div>
-    <canvas id="gameCanvas" style="display: none;"></canvas>
-    <div id="chatBox" style="display: none;">
-        <div id="chatLog"></div>
-        <input type="text" id="chatInput" placeholder="Type your message...">
-    </div>
-    <div id="leaderboard" style="display: none;"></div>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+  <div class="stars" id="stars"></div>
+  <div class="intro-container">
+    <h1>Welcome to Star.io</h1>
+    <input type="text" id="playerName" placeholder="Enter your name">
+    <br>
+    <button id="startGame">Start Game</button>
+  </div>
+
+  <script>
+    // Generate stars
+    function createStar() {
+      const starContainer = document.getElementById('stars');
+      const star = document.createElement('div');
+      star.classList.add('star');
+      
+      // Randomize position and size
+      const size = Math.random() * 3 + 1; // Star size between 1px and 4px
+      star.style.width = `${size}px`;
+      star.style.height = `${size}px`;
+      star.style.top = `${Math.random() * 100}%`;
+      star.style.left = `${Math.random() * 100}%`;
+
+      starContainer.appendChild(star);
+
+      return {
+        element: star,
+        x: parseFloat(star.style.left), // Initial position
+        y: parseFloat(star.style.top),  // Initial position
+        size: size,
+        speed: Math.random() * 1.5 + 0.3, // Random speed
+        lifespan: Math.random() * 500 + 500, // Random lifespan (in ms) between 500ms and 1000ms
+        timeAlive: 0 // Time the star has been alive
+      };
+    }
+
+    // List to store stars
+    const stars = [];
+
+    // Create initial stars
+    const starCount = 300;
+    for (let i = 0; i < starCount; i++) {
+      stars.push(createStar());
+    }
+
+    // Function to move stars towards mouse cursor
+    function attractStars(e) {
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
+
+      stars.forEach(star => {
+        const dx = mouseX - (star.x * window.innerWidth / 100);
+        const dy = mouseY - (star.y * window.innerHeight / 100);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Apply attraction force
+        const attractionStrength = Math.min(10, star.speed * distance / 50);
+        const moveX = (dx / distance) * attractionStrength;
+        const moveY = (dy / distance) * attractionStrength;
+
+        // Update star position
+        star.x += moveX / window.innerWidth * 100;
+        star.y += moveY / window.innerHeight * 100;
+
+        // Apply new positions
+        star.element.style.left = `${star.x}%`;
+        star.element.style.top = `${star.y}%`;
+
+        // If the star is close enough to the mouse, remove it and create a new star
+        if (distance < 3) {
+          // Remove the star from the DOM
+          star.element.remove();
+
+          // Remove the star from the list
+          const index = stars.indexOf(star);
+          if (index !== -1) stars.splice(index, 1);
+
+          // Create a new star to replace it
+          stars.push(createStar());
+        }
+
+        // Increase time the star has been alive
+        star.timeAlive += 16; // Approximate 60fps (16ms per frame)
+
+        // If star's lifespan has ended, remove it and replace it
+        if (star.timeAlive >= star.lifespan) {
+          // Remove the star from the DOM
+          star.element.remove();
+
+          // Remove the star from the list
+          const index = stars.indexOf(star);
+          if (index !== -1) stars.splice(index, 1);
+
+          // Create a new star to replace it
+          stars.push(createStar());
+        }
+      });
+    }
+
+    // Event listener for mouse movement
+    document.addEventListener('mousemove', attractStars);
+
+    // Game start logic
+    document.getElementById('startGame').addEventListener('click', () => {
+      const playerName = document.getElementById('playerName').value.trim();
+      if (playerName) {
+        localStorage.setItem('playerName', playerName); // Save player name to localStorage
+        window.location.href = 'game.html'; // Redirect to game screen
+      } else {
+        alert('Please enter your name to start the game.');
+      }
+    });
+  </script>
 </body>
 </html>
